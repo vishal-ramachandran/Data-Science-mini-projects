@@ -169,7 +169,7 @@ greenbuildings$green_rating = as.factor(greenbuildings$green_rating)
 greenbuildings = na.omit(greenbuildings)
 ```
 
-# One clear fallacy in Excel Guru's calculation was that he assumed that median of overall green and non-green buildings would be a good representation of all the buildings without considering other variables in the dataset. We will try to see how other variables impact the rent and whether median is really a good overall estimator.
+One clear fallacy in Excel Guru's calculation was that he assumed that median of overall green and non-green buildings would be a good representation of all the buildings without considering other variables in the dataset. We will try to see how other variables impact the rent and whether median is really a good overall estimator.
 
 
 ```r
@@ -1455,7 +1455,7 @@ accuracy
 ```
 
 ```r
-#51.76% accurate predictions. Random Forest with 250 trees gave an accuracy of 46.52%
+#50.72% accurate predictions. Random Forest with 250 trees gave an accuracy of 46.52%
 ```
 
 
