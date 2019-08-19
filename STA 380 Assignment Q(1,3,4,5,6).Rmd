@@ -1,0 +1,853 @@
+---
+title: "STA 380 assignment Excluding Q2"
+date: "8/12/2019"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+# *********************************************
+# Visual story telling part 1: Green Buildings
+# *********************************************
+
+```{r}
+# Loading required libraries
+
+library(mosaic)
+library(tidyverse)
+```
+
+
+```{r}
+# Data Import
+greenbuildings <- read.csv("C:/Users/manas/Desktop/greenbuildings.txt")
+greenbuildings$green_rating = as.factor(greenbuildings$green_rating)
+greenbuildings = na.omit(greenbuildings)
+```
+
+# One clear fallacy in Excel Guru's calculation was that he assumed that median of overall green and non-green buildings would be a good representation of all the buildings without considering other variables in the dataset. We will try to see how other variables impact the rent and whether median is really a good overall estimator.
+
+```{r}
+ggplot(data = greenbuildings) + 
+  geom_point(mapping = aes(x = size, y = Rent)) +
+  facet_wrap(~ green_rating, nrow = 2) +
+  ggtitle("Rent vs Size for Green and Non-green buildings") +
+  xlab("Rent per square foot per year") + 
+  ylab("Size of available rental space")
+```
+Not a very intuitive plot but still we can see that non green buildings are more spread both in terms of size and rent.
+
+
+
+```{r}
+size_groupby = greenbuildings%>%
+  group_by(size, green_rating)%>%
+  summarize(rent_median = median(Rent))
+
+ggplot(data = size_groupby) + 
+  geom_line(mapping = aes(x = size, y = rent_median)) +
+  facet_wrap(~ green_rating, nrow = 2) + 
+  ggtitle("Median Rent by Size for Green and Non-green buildings") +
+  xlab("Rent per square foot per year") + 
+  ylab("Size of available rental space")
+```
+If we look at small sizes, there are non-green buildings with very high rent. But again hardly seems a difference if we consider size.
+
+
+```{r}
+boxplot(Rent~green_rating, data=greenbuildings)
+```
+Non green building have more spread rent. Let's remove outliers for more balanced analysis.
+
+```{r}
+greenbuildings[greenbuildings$Rent>100,]
+```
+There are just 26 buildings with more than $100 rent, for more balanced analysis let's drop them from our dataset.
+
+```{r}
+greenbuildings = greenbuildings[greenbuildings$Rent<=100,]
+boxplot(Rent~green_rating, data=greenbuildings)
+```
+Now it looks evenly distributed and green buildings clearly seem to have higher median rent.
+
+
+```{r}
+class_a_groupby = greenbuildings%>%
+  group_by(class_a, green_rating)%>%
+  summarize(rent_median = median(Rent))
+
+class_a_groupby
+
+ggplot(class_a_groupby, aes(x = factor(class_a), y = rent_median, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Median Rent for Green and Non-green buildings by Class_a") +
+  ylab("Median Rent per square foot per year") +
+  xlab("Class_a")
+```
+There is hardly a difference(just 20 cents) between the median rent of green and non-green building in class_a
+
+```{r}
+net_groupby = greenbuildings%>%
+  group_by(net, green_rating)%>%
+  summarize(rent_med = median(Rent))
+
+ggplot(net_groupby, aes(x = factor(net), y = rent_med, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Median Rent for Green and Non-green buildings by net contract indicator") +
+  ylab("Median Rent per square foot per year") +
+  xlab("Net Contract Indicator")
+```
+Tenants with net-rental contracts pay their own utility costs.Green buildings are supposed to save utility cost so for net =1, people are paying utilities separately and hence net rental cost will be high for non green buildings (assuming utility costs are significant like we have in AUstin, need utility data to prove this point). If utility cost is nominal then there is hardly any difference in rent.
+
+
+```{r}
+amenities_groupby = greenbuildings%>%
+  group_by(amenities, green_rating)%>%
+  summarize(rent_med = median(Rent))
+
+amenities_groupby
+
+ggplot(amenities_groupby, aes(x = factor(amenities), y = rent_med, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Median Rent for Green and Non-green buildings by amenities") +
+  ylab("Median Rent per square foot per year") +
+  xlab("Amenities Indicator")
+```
+Clearly green buldings with amenities have a huge advantage in rent. Builder should focus on this!!!
+
+```{r}
+renovated_groupby = greenbuildings%>%
+  group_by(renovated, green_rating)%>%
+  summarize(rent_mean = mean(Rent))
+
+renovated_groupby
+
+ggplot(renovated_groupby, aes(x = factor(renovated), y = rent_mean, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Mean Rent for Green and Non-green buildings by renovation") +
+  ylab("Mean Rent per square foot per year") +
+  xlab("Renovation Indicator")
+```
+The mean rent for non-renovated buildings are same for both green and non-green buildings. And clearly renovated green buildings have an edge. So builder should keep renovation cost in mind too for long run success.
+
+```{r}
+# Looking at building stories distribution. Bucketing them will give more intuitive results
+table(greenbuildings$stories)
+```
+
+```{r}
+# Bucketing the buildings by stories
+greenbuildings$storiesbins = cut(greenbuildings$stories,c(0,10,20,50,120))
+
+green_groupby = greenbuildings%>%
+  group_by(storiesbins, green_rating)%>%
+  summarize(rent_med = median(Rent))
+
+ggplot(green_groupby, aes(x = storiesbins, y = rent_med, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Median Rent for Green and Non-green buildings by building stories") +
+  ylab("Median Rent per square foot per year") +
+  xlab("Building Stories Bins")
+```
+The builder is planning to build 15 stories building, clearly green building has an edge here
+
+```{r}
+greenbuildings$agebins = cut(greenbuildings$age,c(-1,20,40,75,100,200))
+
+age_groupby = greenbuildings%>%
+  group_by(agebins, green_rating)%>%
+  summarize(rent_med = median(Rent))
+
+ggplot(age_groupby, aes(x = agebins, y = rent_med, fill=green_rating)) + 
+  geom_bar(stat='identity', position = 'dodge') +
+  ggtitle("Median Rent for Green and Non-green buildings by building age") +
+  ylab("Median Rent per square foot per year") +
+  xlab("Age Bins")
+```
+In first 20 years green buildings are not profitable when compared to non-green buildings. Though, in long run green building will be more profitable.
+
+
+```{r}
+ggplot(data=greenbuildings[greenbuildings$leasing_rate > 10,]) + 
+  geom_boxplot(mapping=aes(group = green_rating, x=green_rating, y=leasing_rate))
+```
+Green buildings have an edge in occupancy rate with higher median occupancy than non green buildings
+
+# --------------------------------------------------------------------------- #
+Key Inferences:
+1. Excel Guru needs to revisit his analysis. There are a lot of other factors that should be considered in his calculation.
+2. There is no information about which class the new building will fall in. For class_a buildings, there is hardly any difference (just 20 cents) between the median rent of green and non-green buildings. So, if the building is going to fall in this category it won't have an edge over non-green building
+3. In first 20 years green buildings are not profitable when compared to non-green buildings. So, the conclusion of Excel Guru that green building will start making extra profits starting 9th year doesn't look correct 
+4. Renovated green buildings might seem to have an edge over non-green buildings in a long run. But then we need to consider renovation cost and other investments in the calculation
+5. We don't have information about utility cost but if utility cost is not significant then there is no advantage for green buildings where rent is quoted on a net contract basis. Builders should include utility cost in the quoted rental price to make more profit
+6. We don't have enough data to conclude whether green building will certainly have an edge over non-green or not. More data around utility cost, amenities details, renovation cost etc. will help us make more informed decision.
+
+
+# *******************
+# Portfolio modeling
+# *******************
+
+```{r}
+# Loading required libraries
+library(mosaic)
+library(quantmod)
+library(foreach)
+```
+
+```{r}
+# We will select a diverse group of ETFs covering safe to risk categories. We will juggle around with different weights to make the portfolio safe, diverse and aggressive
+
+# IVV - Safe - iShares Core S&P 500 ETF tracks the S&P 500
+# QQQ - Safe - a tech-heavy fund with the big names
+# SPY - Safe - tops the list in terms of AUM and trading volume
+# SVXY - Risky - 2018 was a bad year
+# IHI - Aggresive - ETF with high risk and high return potential
+# IGV - Aggresive - ETF with high risk and high return potential
+
+myetfs = c("IVV", "QQQ", "SPY", "SVXY", "IHI", "IGV")
+myprices = getSymbols(myetfs, from = "2014-01-01")
+```
+
+```{r}
+# Adjusting all stocks for splits and dividends
+for(ticker in myetfs) {
+	expr = paste0(ticker, "a = adjustOHLC(", ticker, ")")
+	eval(parse(text=expr))
+}
+
+head(IVVa)[1]
+head(QQQa)[1]
+head(SPYa)[1]
+head(SVXYa)[1]
+head(IHIa)[1]
+head(IGVa)[1]
+```
+
+
+```{r}
+# Combine close to close changes in a single matrix
+
+all_returns = cbind(	
+                ClCl(IVVa),
+								ClCl(QQQa),
+								ClCl(SPYa),
+								ClCl(SVXYa),
+								ClCl(IHIa),
+								ClCl(IGVa))
+head(all_returns)
+all_returns = as.matrix(na.omit(all_returns))
+```
+
+```{r}
+# Plotting close to close changes. SVXY has a few abrupt days
+par(mfrow = c(3,2))
+
+plot(ClCl(IVVa))
+plot(ClCl(QQQa))
+plot(ClCl(SPYa))
+plot(ClCl(SVXYa))
+plot(ClCl(IHIa))
+plot(ClCl(IGVa))
+```
+
+```{r}
+# Look at the market returns over time
+par(mfrow = c(1,1))
+plot(all_returns[,3], type='l')
+```
+
+```{r}
+# ACF plots shows that there is no significant correlation beyween returns of today and any other day in past 30 days period
+acf(all_returns[,3])
+```
+
+# Safe Portfolio - more weightage to conventional safe stocks
+```{r}
+# Let's do our simulation
+set.seed(123)
+initial_wealth = 100000
+sim1 = foreach(i=1:10000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(0.25, 0.25, 0.30, 0.1, 0.05, 0.05)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker_safe = rep(0, n_days)
+	for(today in 1:n_days) { 
+		return.today = resample(all_returns, 1, orig.ids=FALSE) # bootstrapping
+		holdings = holdings + holdings*return.today # updating holdings
+		total_wealth = sum(holdings) # getting updated total value of portfolio
+		wealthtracker_safe[today] = total_wealth # portfolio value of the day
+		holdings = weights * total_wealth # redistributing wealth everyday
+	}
+	wealthtracker_safe
+}
+
+```
+
+
+```{r}
+# Let's look at the distribution to understand return range
+hist(sim1[,n_days], 20,
+     main="Safe Portflio Holdings Distribution",
+     xlab="Net Portfolio Value")
+wealthtracker_safe
+```
+
+The value at risk of our safe portfolios at the 5% level is $7,688
+```{r}
+quantile(sim1[,20] - 100000, 0.05)
+```
+
+# Diverse Portfolio - similar weightage to all the stocks
+```{r}
+# Let's do our second simulation
+set.seed(234)
+initial_wealth = 100000
+sim2 = foreach(i=1:10000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(0.17, 0.17, 0.21, 0.15, 0.15, 0.15)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker_diverse = rep(0, n_days)
+	for(today in 1:n_days) {
+		return.today = resample(all_returns, 1, orig.ids=FALSE)
+		holdings = holdings + holdings*return.today
+		total_wealth = sum(holdings)
+		wealthtracker_diverse[today] = total_wealth
+		holdings = weights * total_wealth
+	}
+	wealthtracker_diverse
+}
+
+```
+
+
+```{r}
+# Let's look at the distribution to understand return range
+hist(sim2[,n_days], 30,
+     main="Diverse Portflio Holdings Distribution",
+     xlab="Net Portfolio Value")
+wealthtracker_diverse
+```
+The value at risk of our diverse portfolios at the 5% level is $8,622
+```{r}
+quantile(sim2[,20] - 100000, 0.05)
+```
+
+# Aggressive Portfolio - more weightage to aggressive stocks
+```{r}
+# Let's do our simulation
+set.seed(456)
+initial_wealth = 100000
+sim3 = foreach(i=1:10000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(0.1, 0.1, 0.1, 0.2, 0.25, 0.25)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker_agg = rep(0, n_days)
+	for(today in 1:n_days) {
+		return.today = resample(all_returns, 1, orig.ids=FALSE)
+		holdings = holdings + holdings*return.today
+		total_wealth = sum(holdings)
+		wealthtracker_agg[today] = total_wealth
+		holdings = weights * total_wealth
+	}
+	wealthtracker_agg
+}
+
+```
+
+
+```{r}
+# Let's look at the distribution to understand return range
+hist(sim3[,n_days], 30,
+     main="Aggressive Portflio Holdings Distribution",
+     xlab="Net Portfolio  Value")
+wealthtracker_agg
+```
+
+The value at risk of our aggressive portfolios at the 5% level is $10,454
+```{r}
+quantile(sim3[,20] - 100000, 0.05)
+```
+
+# --------------------------------------------------------------------------- #
+Inference:
+1. We can see that as the share of risky ETFs rises, the VaR increases.
+2. A safe portfolio with 75% weightage to conventional big and safe ETFs("IVV", "QQQ", "SPY") has VaR of ~$7.7k - good long term investment
+3. A diverse portfolio with good mix of safe and aggressive ETFs has VaR of ~$8.6k - a more balanced portfolio
+4. An aggressive portfolio with 70% weigtage to aggressive ETFs("SVXY", "IHI", "IGV") has VaR of ~$10.5k - suits best for people with huge risk appetite and who wants to make more money
+
+
+
+# *******************
+# Author attribution
+# *******************
+
+```{r}
+## Loading required libraries
+library(tm) 
+library(magrittr)
+library(slam)
+library(proxy)
+library(tidyverse)
+library(glmnet)
+library(randomForest)
+library(caret)
+library(e1071)
+```
+
+```{r}
+## function to read plain text documents in English
+readerPlain = function(fname){
+  readPlain(elem=list(content=readLines(fname)), 
+            id=fname, language='en') }
+```
+
+```{r}
+# getting list of all the 50 train folders
+train_folder_names = dir("C:/Users/manas/Desktop/STA380-master/data/ReutersC50/C50train")
+
+train_folder_names
+```
+
+```{r}
+# Getting the list of all the files from all the 50 folders
+# "globbing" = expanding wild cards in filename paths
+
+file_list_train = {}
+for (x in train_folder_names){
+  file_list_train = c(file_list_train, Sys.glob(paste0('C:/Users/manas/Desktop/STA380-master/data/ReutersC50/C50train/', x,'/*.txt')))}
+
+file_list_train[1:5]
+
+```
+
+```{r}
+# read all 50X50 files
+train_files = lapply(file_list_train, readerPlain)
+
+train_files[1]
+```
+
+```{r}
+# Clean up the file names removing the directory location details
+# This uses the piping operator from magrittr
+mynames = file_list_train %>%
+  { strsplit(., '/', fixed=TRUE) } %>%
+  { lapply(., tail, n=2) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+
+names(train_files) = mynames
+
+train_files[1]
+```
+
+```{r}
+## create a text mining 'corpus': 
+train_documents_raw = Corpus(VectorSource(train_files))
+```
+
+```{r}
+## pre-processing/tokenization steps
+
+## tm_map just maps some function to every document in the corpus
+my_documents_train = train_documents_raw
+my_documents_train = tm_map(my_documents_train, content_transformer(tolower)) # make everything lowercase
+my_documents_train = tm_map(my_documents_train, content_transformer(removeNumbers)) # remove numbers
+my_documents_train = tm_map(my_documents_train, content_transformer(removePunctuation)) # remove punctuation
+my_documents_train = tm_map(my_documents_train, content_transformer(stripWhitespace)) ## remove excess white-space
+
+## Removing stopwords
+?stopwords
+my_documents_train = tm_map(my_documents_train, content_transformer(removeWords), stopwords("en"))
+
+```
+
+```{r}
+## create a doc-term-matrix
+DTM_train = DocumentTermMatrix(my_documents_train)
+DTM_train
+```
+
+```{r}
+## Drop those terms that only occur in one or two documents
+## This is a common step: the noise of the "long tail" (rare terms)
+##	can be huge, and there is nothing to learn if a term occured once.
+## Below removes those terms that have count 0 in >95% of docs.
+DTM_train = removeSparseTerms(DTM_train, 0.95)
+DTM_train
+```
+
+```{r}
+# construct TF IDF weights
+tfidf_train = weightTfIdf(DTM_train)
+X_train = as.matrix(tfidf_train)
+```
+
+```{r}
+# y values - the names of folders are the names of the authors
+y_train = file_list_train %>%
+	{ strsplit(., '/', fixed=TRUE) } %>%
+	{ lapply(., tail, n=2) } %>%
+  { lapply(., head, n=1) } %>%
+	{ lapply(., paste0, collapse = '') } %>%
+	unlist
+
+y_train[1:5]
+```
+
+```{r}
+# We have too many features. Let's try using PCA for dimensionality reduction
+
+scrub_cols = which(colSums(X_train) == 0)
+X_train = X_train[,-scrub_cols]
+
+pca_x_train = prcomp(X_train, scale=TRUE)
+pca_train = summary(pca_x_train)$importance[3,]
+plot(pca_train, xlab="Dimension")
+
+# From the graph we can see that ~80% of variablitity is explained by just half (400/800) of the predictors.
+```
+
+```{r}
+# repeating all the above data processing steps for test data
+
+test_folder_names = dir("C:/Users/manas/Desktop/STA380-master/data/ReutersC50/C50test")
+
+file_list_test = {}
+for (x in test_folder_names){
+  file_list_test = c(file_list_test, Sys.glob(paste0('C:/Users/manas/Desktop/STA380-master/data/ReutersC50/C50test/', x,'/*.txt')))}
+
+test_files = lapply(file_list_test, readerPlain)
+
+mynames_test = file_list_test %>%
+  { strsplit(., '/', fixed=TRUE) } %>%
+  { lapply(., tail, n=2) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+
+names(test_files) = mynames_test
+
+test_documents_raw = Corpus(VectorSource(test_files))
+
+## Some pre-processing/tokenization steps.
+## tm_map just maps some function to every document in the corpus
+my_documents_test = test_documents_raw
+my_documents_test = tm_map(my_documents_test, content_transformer(tolower)) # make everything lowercase
+my_documents_test = tm_map(my_documents_test, content_transformer(removeNumbers)) # remove numbers
+my_documents_test = tm_map(my_documents_test, content_transformer(removePunctuation)) # remove punctuation
+my_documents_test = tm_map(my_documents_test, content_transformer(stripWhitespace)) ## remove excess white-space
+
+## Remove stopwords.  Always be careful with this: one person's trash is another one's treasure.
+?stopwords
+my_documents_test = tm_map(my_documents_test, content_transformer(removeWords), stopwords("en"))
+
+# Ignoring words in test document matrix which are not in train document
+DTM_test = DocumentTermMatrix(my_documents_test, control = list(dictionary=Terms(DTM_train)))
+
+# TF-IDF
+tfidf_test = weightTfIdf(DTM_test)
+X_test = as.matrix(tfidf_test)
+
+# Target variable for test set - basically the name of authors(folder name)
+y_test = file_list_test %>%
+	{ strsplit(., '/', fixed=TRUE) } %>%
+	{ lapply(., tail, n=2) } %>%
+  { lapply(., head, n=1) } %>%
+	{ lapply(., paste0, collapse = '') } %>%
+	unlist
+
+scrub_cols_test = which(colSums(X_test) == 0)
+X_test = X_test[,-scrub_cols_test]
+
+# to make sure that we select same PCA result features for test set as well
+new_x_test = predict(pca_x_train,newdata =X_test)[,1:400]
+```
+
+Our train data, target variable and test sets are ready, Let's try Random Forest and Naive Baye algorithms to predict author of any given article.
+
+```{r}
+# Naive Bayes
+
+nb_model =naiveBayes(as.factor(y_train) ~., data=as.data.frame(pca_x_train$x[,1:400]))
+
+nb_pred = predict(nb_model,new_x_test)
+
+nb_conf_matx <- caret::confusionMatrix(nb_pred,as.factor(y_test))
+accuracy_nb <- nb_conf_matx$overall['Accuracy']
+accuracy_nb
+
+# 46.04% accuracy
+```
+
+
+```{r}
+# Random Forest 
+
+rf_model = randomForest(as.factor(y_train) ~ ., data=as.data.frame(pca_x_train$x[,1:400]), ntree=1000, mtry=20, importance=TRUE)
+
+rf_pred = predict(rf_model,new_x_test)
+
+confusion_matrix <- caret::confusionMatrix(rf_pred,as.factor(y_test))
+accuracy <- confusion_matrix$overall['Accuracy']
+accuracy
+
+#51.76% accurate predictions. Random Forest with 250 trees gave an accuracy of 46.52%
+````
+
+
+
+# *******************
+# Market segmentation
+# *******************
+
+```{r}
+
+mktg = read.csv('C:/Users/manas/Downloads/social_marketing.csv',header=TRUE)
+
+#Removing the user id and spam columns
+mktg=mktg %>% select(-'chatter', -'uncategorized', -'spam', -'adult', -'X')
+
+#Scaling the dataset
+mktg_scaled = scale(mktg, center=TRUE, scale=TRUE)
+mu = attr(mktg_scaled,"scaled:center")
+sigma = attr(mktg_scaled,"scaled:scale")
+
+```
+
+```{r}
+
+#Categories with maximum number of tweets
+sort(colSums(mktg), decreasing = TRUE)[1:10]
+#photo_sharing, health_nutrition and cooking were the categories with most tweets
+
+```
+
+```{r}
+
+#Correlation plot between the categories
+library(corrplot)
+corr_matrix <- cor(mktg)
+corrplot(corr_matrix,method = 'shade',type = 'upper')
+
+#The following pairts had the highest correlation:
+#college_uni and online_gaming
+#health_nutrition and personal_fitness
+#travel and politics
+
+```
+
+
+```{r}
+
+#k-means clustering
+clust1 = kmeans(mktg_scaled, 6, nstart=25)
+
+for (i in c(1:6)){
+  a=which(clust1$cluster==i)
+  cc=mktg[a,]
+  print(names(which.max(colSums(cc[,2:ncol(cc)]))))
+}
+
+```
+
+```{r}
+
+#Euclidian distance matrix
+mktg_distance_matrix = dist(mktg_scaled, method='euclidean')
+hier_mktg = hclust(mktg_distance_matrix, method='average')
+
+#Cutting the clustering tree at k=6
+cluster1 = cutree(hier_mktg, k=6)
+#plot(hier_mktg, cex=0.8)
+
+for (i in c(1:6)){
+  a=which(cluster1==i)
+  cc=mktg[a,]
+  print(names(which.max(colSums(cc[,2:ncol(cc)]))))
+}
+
+```
+
+```{r}
+
+# Single linkage clustering
+hier_mktg2 = hclust(mktg_distance_matrix, method='single')
+cluster2 = cutree(hier_mktg2, k=6)
+#plot(hier_mktg2, cex=0.8)
+
+for (i in c(1:6)){
+  a=which(cluster2==i)
+  cc=mktg[a,]
+  print(names(which.max(colSums(cc[,2:ncol(cc)]))))
+}
+
+```
+
+```{r}
+
+# Single linkage clustering
+hier_mktg3 = hclust(mktg_distance_matrix, method='complete')
+cluster3 = cutree(hier_mktg3, k=6)
+#plot(hier_mktg2, cex=0.8)
+
+for (i in c(1:6)){
+  a=which(cluster3==i)
+  cc=mktg[a,]
+  print(names(which.max(colSums(cc[,2:ncol(cc)]))))
+}
+
+```
+
+```{r}
+
+#k-means is able to give us more distinct clusters than any other method
+#Plotting the output of k-means clustering
+library(factoextra)
+fviz_cluster(clust1, data = mktg_scaled)
+
+```
+
+```{r}
+
+#Extracting all the cluster centers
+c1 = clust1$center[1,]*sigma + mu
+c2 = clust1$center[2,]*sigma + mu
+c3 = clust1$center[3,]*sigma + mu
+c4 = clust1$center[4,]*sigma + mu
+c5 = clust1$center[5,]*sigma + mu
+c6 = clust1$center[6,]*sigma + mu
+
+cluster_centers = rbind(c1,c2,c3,c4,c5,c6)
+cluster_centers = t(cluster_centers)
+cluster_centers
+
+```
+
+
+#--------------------------------------------------------------------------#
+#Conclusion
+The k-means clustering gave us some interesting info about the followers:
+
+Cluster 1: People who were sharing a lot of photos and discussing about current events. These can be meme creators
+
+Cluster 2: Discussions were mainly around parenting and food. These can be doctors who post about ideal food and parenting care for babies
+
+Cluster 3: This cluster had people who shared photos about cooking and beauty. These can be homemakers who provide homemade beauty and cooking tips
+
+Cluster 4: A lot of posts were concentrated on health and fitness. These can be the health freaks and gym trainers
+
+Cluster 5: This cluster had discussions about travel, news, politics and computers. These can be the bloggers and news reporters
+
+Cluster 6: The last cluster had university and online gaming related discussions. These are the teenage gamers
+
+
+
+
+# ************************
+# Association rule mining
+# ************************
+
+```{r}
+
+library(tidyverse)
+library(arules)  # has a big ecosystem of packages built around it
+library(arulesViz)
+
+groceries <- read.transactions('C:/Users/manas/Downloads/groceries.csv', sep=',')
+summary(groceries)
+
+```
+
+```{r}
+
+# Now run the 'apriori' algorithm
+# Look at rules with support > .003 & confidence >.1 & length >= 2
+grocery_rules <- apriori(groceries, parameter = list(support = 0.003, confidence = 0.1, minlen = 2))
+
+```
+
+```{r}
+
+summary(grocery_rules)
+
+```
+
+```{r}
+
+#Checking the association output
+inspect(sort(grocery_rules, by = 'lift')[1:10])
+
+```
+
+```{r}
+
+#Plot of the top 30 rules from overall grocery dataset
+plot(head(grocery_rules, 30, by='lift'), method='graph')
+
+```
+
+```{r}
+
+#Plot of the vegetable association rule
+root_vegetables_rules <- subset(grocery_rules, items %in% 'root vegetables')
+inspect(sort(root_vegetables_rules, by = 'lift')[1:10])
+plot(head(root_vegetables_rules, 5, by='lift'), method='graph')
+
+```
+
+```{r}
+
+#Plot of the cream association rule
+cream_rules <- subset(grocery_rules, items %in% 'whipped/sour cream')
+inspect(sort(cream_rules, by = 'lift')[1:10])
+plot(head(cream_rules, 5, by='lift'), method='graph')
+
+```
+
+```{r}
+
+#Plot of the yogurt association rule
+yogurt_rules <- subset(grocery_rules, items %in% 'yogurt')
+inspect(sort(yogurt_rules, by = 'lift')[1:10])
+plot(head(yogurt_rules, 5, by='lift'), method='graph')
+
+```
+
+```{r}
+
+#Plot of the yam association rule
+ham_rules <- subset(grocery_rules, items %in% 'ham')
+inspect(sort(ham_rules, by = 'lift')[1:10])
+plot(head(ham_rules, 5, by='lift'), method='graph')
+
+```
+
+```{r}
+
+#Plot of the napkin association rule
+napkins_rules <- subset(grocery_rules, items %in% 'napkins')
+inspect(sort(napkins_rules, by = 'lift')[1:10])
+plot(head(napkins_rules, 5, by='lift'), method='graph')
+
+```
+
+#-----------------------------------------------------------------------------#
+#Conclusion
+
+The probability of a person buying ham is high when he/she buys either white bread or processed cheese. That's the perfect combination for a yummy sandwich!
+
+Napkins and hygiene articles are usually bought together
+
+All fruits and vegetables formed a good association with a high lift value of 5.8
+
+Berries, whipped cream and butter are bought together. These are the people who are interested in baking
+
+The dairy products: whole milk, yogurt and curd were also bought together often
