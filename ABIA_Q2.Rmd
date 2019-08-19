@@ -1,0 +1,231 @@
+---
+title: "Exercises"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+Q2. Flights at ABIA
+```{r}
+# Reading CSV File
+ABIA = read.csv("D:/Summer Semester/Intro to Predictive Modelling/Unsupervised/data/ABIA.csv")
+dim(ABIA)
+```
+
+```{r}
+library(funModeling)
+library(DataExplorer)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+```
+
+```{r}
+ABIA$Month = as.factor(ABIA$Month)
+ABIA$DayOfWeek = as.factor(ABIA$DayOfWeek)
+```
+
+```{r}
+summary(ABIA)
+```
+
+```{r}
+# Summary of numerical variables
+profiling_num(ABIA)
+```
+
+```{r}
+# Plot for amount of cancellations per month
+monthlycancellation = ABIA %>%
+  group_by(Month)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(monthlycancellation, aes(x=Month, y=cancel.sum)) + 
+  geom_bar(stat='identity') + 
+  labs(title="Number of cancellations each month",
+       y="Number of cancellations",
+       x = "Month") + 
+  coord_flip()
+```
+
+#Most of the flights that are getting cancelled are the ones in March.
+
+```{r}
+# Plot for amount of cancellations per carrier
+monthlycancellation = ABIA %>%
+  group_by(UniqueCarrier)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(monthlycancellation, aes(x=reorder(UniqueCarrier, cancel.sum), y=cancel.sum)) + 
+  geom_bar(stat='identity') +
+  labs(title="Number of cancellations for each carrier",
+       y="Number of cancellations",
+       x = "Carrier") + 
+  coord_flip()
+```
+
+#Most of the flights that are getting cancelled belong to American Airlines.
+
+```{r}
+# Plot for amount of cancellations per origin
+origincancellation = ABIA %>%
+  group_by(Origin)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+origincancellation = as.data.frame(origincancellation)
+origincancellation <-origincancellation[which(origincancellation$cancel.sum > 10),]
+
+ggplot(origincancellation, aes(x=reorder(Origin, cancel.sum), y=cancel.sum)) + 
+  geom_bar(stat='identity') +
+  labs(title="Number of cancellations for each origin",
+       y="Number of cancellations",
+       x = "Orgin") +
+  coord_flip()
+```
+
+
+```{r}
+# Plot for amount of cancellations per destination
+destcancellation = ABIA %>%
+  group_by(Dest)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+destcancellation = as.data.frame(destcancellation)
+destcancellation <-destcancellation[which(destcancellation$cancel.sum > 10),]
+
+ggplot(destcancellation, aes(x=reorder(Dest, cancel.sum), y=cancel.sum)) + 
+  geom_bar(stat='identity') + 
+  labs(title="Number of cancellations for each destination",
+       y="Number of cancellations",
+       x = "Destination") +
+  coord_flip()
+```
+
+#The source and destination plots makes sense because most of the flights recorded in ABIA will either be from Austin or to Austin. Other than that, most of the passengers seem to be travelling to and from Dallas.
+
+```{r}
+# Plot for amount of cancellations for each day of the week
+daycancellation = ABIA %>%
+  group_by(DayOfWeek)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(daycancellation, aes(x=DayOfWeek, y=cancel.sum)) + 
+  geom_bar(stat='identity') + 
+  labs(title="Number of cancellations for each day of the week",
+       y="Number of cancellations",
+       x = "Day of the week") +
+  coord_flip()
+
+```
+#Most of the cancellations happen on weekdays with the highest number of cancellations on Tuesday
+
+#Now lets analyze the flights to and from Dallas
+```{r}
+DallasData <- ABIA[which(ABIA$Origin=='DFW' | ABIA$Dest=='DFW'),]
+```
+
+```{r}
+# Plot for amount of cancellations to and from Dallas for each day of the week
+daycancellation = DallasData %>%
+  group_by(DayOfWeek)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(daycancellation, aes(x=DayOfWeek, y=cancel.sum)) + 
+  geom_bar(stat='identity') + 
+  labs(title="Number of cancellations for each day of the week for Dallas flights",
+       y="Number of cancellations",
+       x = "Day of the week") +
+  coord_flip()
+```
+
+#Flights on tuesdays tend to get cancelled more often.
+
+```{r}
+# Plot for amount of cancellations as per distance to be covered by the flight
+distcancellation = ABIA %>%
+  group_by(Distance)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(distcancellation, aes(x=Distance, y=cancel.sum)) + 
+  geom_point(stat='identity') + 
+  labs(title="Number of cancellations vs distance covered by the flight",
+       y="Number of cancellations",
+       x = "Distance covered by the flight") +
+  coord_flip()
+```
+
+#Most of the flights that get cancelled are the ones that are supposed to cover shorter distances.
+
+```{r}
+# Plot for amount of cancellations per departure time
+depcancellation = ABIA %>%
+  group_by(CRSDepTime)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(depcancellation, aes(x=CRSDepTime, y=cancel.sum)) + 
+  geom_point(stat='identity') + 
+  labs(title="Number of cancellations vs departure time",
+       y="Number of cancellations",
+       x = "Departure Time") +
+  coord_flip()
+```
+#Many flights got cancelled during early hours of the day
+
+```{r}
+# Plot for amount of cancellations per day of the year
+daymonthcancellation = ABIA %>%
+  group_by(Month, DayofMonth)  %>%
+  summarise(cancel.sum = sum(Cancelled))
+
+ggplot(daymonthcancellation, aes(x=DayofMonth, y=cancel.sum)) + 
+  geom_bar(stat='identity') + 
+  labs(title="Number of cancellations vs day of the month",
+       y="Number of cancellations",
+       x = "Day of the month") +
+  #coord_flip()+
+  facet_wrap(~ Month, nrow = 3)
+
+```
+
+#Most of the flights that got cancelled were scheduled in March, April or September
+#Most of the flights get cancelled in the middle of the month that is from 10th-20th
+
+#Let's look at the arrival and departure delays for different carriers
+
+```{r}
+ggplot(ABIA, aes(x=(UniqueCarrier), ArrDelay)) + 
+  geom_boxplot(fill="plum", outlier.shape = NA) + 
+  scale_y_continuous(limits = quantile(ABIA$ArrDelay, c(0.1, 0.9),na.rm =  TRUE)) +
+  labs(title="Box plot", 
+       subtitle="Arrival Delay by Carrier",
+       x="Carrier",
+       y="Arrival Delay")
+```
+#Most of the carriers's flights arrive on average on or before the scheduled arrival time.
+
+```{r}
+ggplot(ABIA, aes(x=(UniqueCarrier), DepDelay)) + 
+  geom_boxplot(fill="plum", outlier.shape = NA) + 
+  scale_y_continuous(limits = quantile(ABIA$DepDelay, c(0.1, 0.9),na.rm =  TRUE)) +
+  labs(title="Box plot", 
+       subtitle="Departure Delay by Carrier",
+       x="Carrier",
+       y="Deaprture Delay")
+```
+#Most of the carriers's flights depart on average on or before the scheduled departure time.
+
+#OBSERVATIONS and RECOMMENDATIONS
+
+#We can observe that most of the cancellations happened in February, March and April
+#Flights of American Airlines and Southwest airlines get cancelled the most and the ones of Frontier and Northwest Airlines get cancelled the least
+#We observe that the flights originating from Austin get cancelled the most which is obvious since the number of flights from Austin is more in the data
+#Other origin airports from which flights get cancelled are DFW and DAL airport 
+#Destination airports for which flights get cancelled are DFW and DAL airport
+#If you are travelling from Dallas to Austin or Austin to Dallas you should expect a lot of cancellations
+#Most of the cancellations seem to happen on weekdays with the most number of cancellations happening on Tuesday which can be due to the fact 
+#It might be because people don't prefer to travel on weekdays due to their work commitments and low occupancy might be a reason of higher cancellations on weekdays
+#Many flights got cancelled during early hours of the day which again might be because of low occupancy on early morning flights
+#Most of the flights that got cancelled were scheduled in March, April or September
+#This might be due to bad weather conditions and due to the hurricanes and tornadoes that severely affected Texas in 2008
+
